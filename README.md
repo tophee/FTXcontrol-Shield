@@ -20,12 +20,15 @@ In this project, I'm monitoring and controlling the ventilation of my house. My 
 * Manually control the ventilation state via a button
 
 ## Hardware used
-* 1cArduino Uno
+* 1 Arduino Uno
 * 3-4 [Sonoff Si7021](https://www.itead.cc/wiki/Sonoff_Sensor_Si7021) temperature and humidity sensors
 * Various electronic components to build the shield (see schematic). Most importantly:
   * 1 photoresistor for reading the current ventilation state via the LED on the ventilation unit's control board
   * 1 optocoupler to switch the ventilation state on the control board
 * 1 LCD display
+
+
+Please note that this repository does not yet include all the information that it should include. I will remove this line once at least a first version of everything is uploaded.
 
 
   
