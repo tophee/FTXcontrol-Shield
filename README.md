@@ -13,6 +13,9 @@ In this project, I'm monitoring and controlling the ventilation of my house. My 
 * Automatically change ventilation state (low, middle, high) based on temperature and/or humidity values. For example: 
   * Set ventilation to low when outside temperature is higher than inside temperature (Don't have the ventilation heat up the house on hot summer days.)
   * Set venilation to high when oustide temperature is lower than inside temperature and insider temperature is over 25°C. (Cool down the house during the night.)
+* Log all values 
+  * to either a csv file (using [processing](https://github.com/processing/processing) to read the data from the Arduino serial port or
+  * to an [InfluxDB](https://github.com/influxdata/influxdb) database (using [Petr Pudlak's python script](https://github.com/ppetr/arduino-influxdb) to read the serial port and send the data to the database).
 
 ## Hardware used
 * Arduino Uno
