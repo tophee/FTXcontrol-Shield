@@ -3,6 +3,8 @@ An Arduino shield for controlling the FläktWoods RDKR ventilation unit
 
 In this project, I'm monitoring and controlling the ventilation of my house. My ventilation unit is a **FläktWoods RDKR** (which as a rotating heat exchanger, hence FTX) but it should be possible to use at least parts of this project with other systems.
 
+**Please note** that this repository does not yet include all the information that it should include. I will remove this line once at least a first version of everything is uploaded.
+
 ## Features
 * Monitor and log temperature and humidity of 
   * outside air (_uteluft_)
@@ -22,13 +24,37 @@ In this project, I'm monitoring and controlling the ventilation of my house. My 
 ## Hardware used
 * 1 Arduino Uno
 * 3-4 [Sonoff Si7021](https://www.itead.cc/wiki/Sonoff_Sensor_Si7021) temperature and humidity sensors
+* 1 PCB prototyping board with at least 14 x 21 holes (to start with, you can of course use a breadboard)
 * Various electronic components to build the shield (see schematic). Most importantly:
   * 1 photoresistor for reading the current ventilation state via the LED on the ventilation unit's control board
   * 1 optocoupler to switch the ventilation state on the control board
 * 1 LCD display
 
 
-Please note that this repository does not yet include all the information that it should include. I will remove this line once at least a first version of everything is uploaded.
+## Building the shield
+This is the schematic of the final board:
+![](/images/schematic.jpg)
+
+and this is how I fitted it on my PCB with 14 x 21 holes:
+
+_Legend:_
+* Green lines are connections on the back (bootom) of the board
+* Red lines are connections on the front (top) of the board
+* White circles are vias, i.e. connections between the front and the back of the board
+* White lines can be ignored
+* The yellow circles at the top and bottom represent the Arduino pins.
+* The yellow rectanngle represents the edge of the PCB. So the board is not covering all pins (because that's the size board I happened to have).
 
 
-  
+### Front:
+
+![](/images/board_front.jpg)
+
+![](/images/board_photo1.jpg)
+
+![](/images/board_photo2.jpg)
+
+### Back:
+![](/images/board_back.jpg)
+
+
