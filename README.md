@@ -44,7 +44,7 @@ On the left: R1, J1, R2
 **J1**: female pinheader (2 pins)
 **R2**: 1k or 10k resistor (in the schematic and the photos you see 1k but I think 10k works better because it uses a larger voltage range.
 
-The two resistors form a voltage divider and the Arduino reads the voltage corresponding to the photresistors current resistance (which varies based on the amount of light it receives. It receives more light when the LED closest to it is lit and least light when the LED furthest away from it is lit).
+The two resistors form a voltage divider and the Arduino reads the voltage corresponding to the photresistors current resistance (which varies based on the amount of light it receives. It receives more light when the LED closest to it is lit and least light when the LED furthest away from it is lit). See [here](https://github.com/tophee/FTXcontrol-Shield/blob/master/Shield_to_RDKR_interface.md) for details.
 
 
 ### The button
@@ -78,6 +78,8 @@ U5: [PC817X DIP-4](https://www.electrokit.com/uploads/productfile/40300/sf-00061
 
 This connects the Arduino to the ventilation control board while keeping the two galvanically separate. In order to switch to the next ventilation state, two pins on the control board need to be connected to each other. It can be done with a mechanical switch but since the whole point here is to allow the Arduino to control the ventilation, an optocoupler is used. When voltage is applied to one side of the optocoupler, the pins on the other side are shortened.
 
+The wiring between the shield and the ventilation control board is described [here](https://github.com/tophee/FTXcontrol-Shield/blob/master/Shield_to_RDKR_interface.md).
+
 ## The PCB
 
 This is how I fitted it on my PCB with 14 x 21 holes:
@@ -102,5 +104,8 @@ To connect the shield to the arduino, header pins are soldered onto the back of 
 
 ### Back:
 ![](/images/board_back.jpg)
+
+## Connecting the shield to the ventilation control board
+See [here](https://github.com/tophee/FTXcontrol-Shield/blob/master/Shield_to_RDKR_interface.md).
 
 
