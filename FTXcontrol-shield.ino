@@ -16,66 +16,62 @@ LiquidCrystal_I2C lcd (0x27, 16, 2);
 
 
 DHT dht[] = {
-  {DHTPIN1, DHT22}
-  ,
-  {DHTPIN2, DHT22}
-  ,
-  {DHTPIN3, DHT22}
-  ,
-  {DHTPIN4, DHT22}
-  ,
+  {DHTPIN1, DHT22},
+  {DHTPIN2, DHT22},
+  {DHTPIN3, DHT22},
+  {DHTPIN4, DHT22},
 };
 
 
-const int numsens = 3;		//number of sensors used
+const int numsens = 3;					//number of sensors used
 float humidity[numsens];
 float temperature[numsens];
 
 
-const int numReadings = 10;	// number of readings of ventstate LED
-const unsigned long checkInterval = 3600000;	// how long to wait before checking again after setting ventstate blindly 
-const unsigned long readInterval = 1000;	// sensors will be read every x milliseconds
-const unsigned long logInterval = 60000;	// send data every x milliseconds
-unsigned long lasthistoryTime = 0;	// timer variable
-const byte history_ints_per_hour = 6;	// how many intervals measurement intervals (e.g. 6 gives 10 minute history intervals)
-const byte history = history_ints_per_hour + 1;	// how many previous values do we save?
-byte historyIndex = 0;		// index circulating through the history array 
-float thistory[numsens][history];	// keeping this separate from the temperature array with current values
-float new_changerate[numsens];	// not used (but could be used to calculate temperature accelleration)
+const int numReadings = 10;				// number of readings of ventstate LED
+const unsigned long checkInterval = 3600000;		// how long to wait before checking again after setting ventstate blindly 
+const unsigned long readInterval = 1000;		// sensors will be read every x milliseconds
+const unsigned long logInterval = 60000;		// send data every x milliseconds
+unsigned long lasthistoryTime = 0;			// timer variable
+const byte history_ints_per_hour = 6;			// how many intervals measurement intervals (e.g. 6 gives 10 minute history intervals)
+const byte history = history_ints_per_hour + 1;		// how many previous values do we save?
+byte historyIndex = 0;					// index circulating through the history array 
+float thistory[numsens][history];			// keeping this separate from the temperature array with current values
+float new_changerate[numsens];				// not used (but could be used to calculate temperature accelleration)
 float old_changerate[numsens];
 const unsigned long difftriggerInterval = 300000;	// how long t0 has to be lower than t2 to start ventilation
-const float requireddiff = 1.0;	// how much colder does it have to be outside for ventilation to kick in?
-const float requireddiffhigh = 4.0;	// how much colder for high ventilation to kick in?
-const float maxinsidetemp = 25.0;	// temp needed for automatic adjustment to kick in (24 might be bit low, we'll see)
-//const int maxhighTime = 10;  not used           // maximum hours on high ventilation per 24h
+const float requireddiff = 1.0;				// how much colder does it have to be outside for ventilation to kick in?
+const float requireddiffhigh = 4.0;			// how much colder for high ventilation to kick in?
+const float maxinsidetemp = 25.0;			// temp needed for automatic adjustment to kick in (24 might be bit low, we'll see)
+//const int maxhighTime = 10;  not used           	// maximum hours on high ventilation per 24h
 unsigned long currentTime;
-unsigned long previouslogTime = 0;	// timer variable
-unsigned long colderoutsideTime = 0;	// timer variable 
-unsigned long muchcolderoutsideTime = 0;	// timer variable 
-unsigned long warmeroutsideTime = 0;	// timer variable 
-unsigned long lastreadTime = 0;	// timer variable 
-unsigned long lastfailTime = 0;	// timer variable 
-byte ventstate;			// ventilation state arduino believes the ventilation system to be in 
-byte desiredventstate;		// ventilation state arduino currently wants
-byte lastledventstate;		// ventilation state indicated by the ventilation systems LEDs
+unsigned long previouslogTime = 0;			// timer variable
+unsigned long colderoutsideTime = 0;			// timer variable 
+unsigned long muchcolderoutsideTime = 0;		// timer variable 
+unsigned long warmeroutsideTime = 0;			// timer variable 
+unsigned long lastreadTime = 0;				// timer variable 
+unsigned long lastfailTime = 0;				// timer variable 
+byte ventstate;						// ventilation state arduino believes the ventilation system to be in 
+byte desiredventstate;					// ventilation state arduino currently wants
+byte lastledventstate;					// ventilation state indicated by the ventilation systems LEDs
 volatile byte buttonpress;
 byte checkventstate;
-int errorsensor[numsens];	// counting sensor read errors (NaN values) 
-int used_old_t_value[numsens];	// counting how often sensor yielded NaN values more than 10 times in a row (resulting in previous value being used instead)
+int errorsensor[numsens];				// counting sensor read errors (NaN values) 
+int used_old_t_value[numsens];				// counting how often sensor yielded NaN values more than 10 times in a row (resulting in previous value being used instead)
 int used_old_h_value[numsens];
-bool historyarrayfull = false;	// this flag indicates when old changerate can be calculated
-bool historyarrayhalffull = false;	// this flag indicates when new (current) changerate can be calculated
-bool autohigh = true;		// this flag indicates whether high ventilation state was set automatically (rather than manually)
-						  // assuming autohigh at startup to avoid getting stuck in ventstate 2
-bool checkneeded = false;	// this flag indicates whether ventstate needs to be synced after failed reading of ledventstate
+bool historyarrayfull = false;				// this flag indicates when old changerate can be calculated
+bool historyarrayhalffull = false;			// this flag indicates when new (current) changerate can be calculated
+bool autohigh = true;					// this flag indicates whether high ventilation state was set automatically (rather than manually)
+						  	// assuming autohigh at startup to avoid getting stuck in ventstate 2
+bool checkneeded = false;				// this flag indicates whether ventstate needs to be synced after failed reading of ledventstate
 int error[6];
-int lederror = 0;		// counting how often reading the LED (ledventstate) failed
-int ledbrightness;		// this is for long term debugging to make sure the ledbrighness reported is the same as the one used to calculate ledventstate
-const int mode = 2;		// 0 = manual, 1 = semi-automatic, 2 = automatic, 3 = enforced automatic
-						  // semi-automatic only becomes active when threshhold is crossed (no syncing of ventstates)
-						  // automatic checks actual state regularly and corrects manual changes (except high ventilation)
-						  // enforced automatic will even "correct" when high ventilation is turned on manually
-byte printmode = 1;		// 1 = output to influxdb, 2 = output to csv file
+int lederror = 0;					// counting how often reading the LED (ledventstate) failed
+int ledbrightness;					// this is for long term debugging to make sure the ledbrighness reported is the same as the one used to calculate ledventstate
+const int mode = 2;					// 0 = manual, 1 = semi-automatic, 2 = automatic, 3 = enforced automatic
+						  		// semi-automatic only becomes active when threshhold is crossed (no syncing of ventstates)
+						  		// automatic checks actual state regularly and corrects manual changes (except high ventilation)
+						  		// enforced automatic will even "correct" when high ventilation is turned on manually
+byte printmode = 1;					// 1 = output to influxdb, 2 = output to csv file
 
 
 // uncomment next line to debug. Note that logging to influxdb will not work while in debugging mode.
@@ -102,7 +98,7 @@ setup ()
 {
   DEBUG_PRINT ((F ("Status: Starting setup...")));
   lcd.init ();
-  lcd.backlight ();		//Hintergrundbeleuchtung einschalten (lcd.noBacklight(); schaltet die Beleuchtung aus). 
+  lcd.backlight ();		// Hintergrundbeleuchtung einschalten (lcd.noBacklight(); schaltet die Beleuchtung aus). 
   Serial.begin (9600);
 for (auto & sensor:dht)
     {
