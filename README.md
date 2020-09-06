@@ -100,6 +100,8 @@ To connect the shield to the arduino, header pins are soldered onto the back of 
 
 ![](/images/board_photo1.jpg)
 
+Note that the wiring for the sensors on the picture is incomplete. Each sensor needs three wires.
+
 ![](/images/board_photo2.jpg)
 
 ### Back:
