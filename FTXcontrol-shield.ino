@@ -442,4 +442,377 @@ whichventstate ()
 float
 dew (float t, float rh)
 // dewpoint formula by Peter Mander (https://carnotcycle.wordpress.com/2017/08/01/compute-dewpoint-temperature-from-rh-t/)
-// According to Peter, this formula is accurate to within 0.1% over the temperature range b
+// According to Peter, this formula is accurate to within 0.1% over the temperature range -30°C to +35°C
+{
+  return (243.5 * (log (rh / 100) + ((17.67 * t) / (243.5 + t))) / (17.67 - log (rh / 100) - ((17.67 * t) / (243.5 + t))));	// formula by P. Mander, 2017
+}
+
+float
+ah (float t, float rh)
+// absolute humidity formula by Peter Mander (https://carnotcycle.wordpress.com/2012/08/04/how-to-convert-relative-humidity-to-absolute-humidity/https://carnotcycle.wordpress.com/2012/08/04/how-to-convert-relative-humidity-to-absolute-humidity/
+{
+  return (6.112 * pow (2.71828, ((17.67 * t) / (243.5 + t))) * rh * 2.1674) / (273.15 + t);	// the unit is g/m3
+}
+
+
+int
+brightness ()
+{
+  DEBUG_PRINT ((F ("Status: Reading brightness...")));
+  //  control the voltage supply by a pin and add code here to turn on pin only for reading
+  digitalWrite (photo5V, HIGH);
+  delay (50);			// wait for photoresistor to get ready
+  int total = 0;
+  int reading[numReadings];
+  for (int i = 0; i < numReadings; i++)
+    {
+      total = total + analogRead (photo);
+      delay (1);
+    }
+  digitalWrite (photo5V, LOW);	//  turn off voltage supply
+  DEBUG_PRINT ((F ("Status: Done reading brightness.")));
+  ledbrightness = total / numReadings;
+  DEBUG_PRINT ((ledbrightness));
+  return (ledbrightness);
+}
+
+
+int
+ledventstate (int x)
+{
+  DEBUG_PRINT ((F ("Status: Translating brightness to ventstate...")));
+  if (x > 10 && x < 20)
+    {				// 800 - 900
+      lederror = 0;
+      DEBUG_PRINT ((F ("Status: Current ledventstate is 0")));
+      lastledventstate = 0;
+      return 0;
+    }
+  else if (x > 25 && x < 60)
+    {				// 600 - 760
+      lederror = 0;
+      DEBUG_PRINT ((F ("Current ledventstate is 1")));
+      lastledventstate = 1;
+      return 1;
+    }
+  else if (x > 80 && x < 200)
+    {				// 280 - 400
+      lederror = 0;
+      DEBUG_PRINT ((F ("Current ledventstate is 2")));
+      lastledventstate = 2;
+      return 2;
+    }
+  else
+    {
+      lederror++;
+      DEBUG_PRINT ((F
+		    ("Error: Out range error reading LED. Calibration needed. Brightness value was ")));
+      DEBUG_PRINT ((x));
+      lastledventstate = 9;
+      return 9;
+    }
+}
+
+
+void
+setventstate (int desired)
+{
+  DEBUG_PRINT ((F ("Status: Preparing to set ventstate...")));
+  int current = ledventstate (brightness ());
+  if (current > 2)
+    {				// if somethething went wrong reading the LED
+      delay (100);
+      current = ledventstate (brightness ());	//try again ...
+      DEBUG_PRINT ((F ("Status: Error reading ventstate (1)")));
+    }
+  if (current > 2)
+    {
+      delay (500);
+      current = ledventstate (brightness ());	//...and once again
+      DEBUG_PRINT ((F ("Status: Error reading ventstate (2)")));
+    }
+  if (current > 2)
+    {
+      error[1]++;
+      DEBUG_PRINT ((F ("Status: Error reading ventstate (3)")));
+      blindsetventstate (desired);	// last resort: setting ventstate blindly (based on last known/assumed current ventstate)
+      return;
+    }
+  if (current == 2 && !autohigh && mode != 3)
+    {				// ventstate 2 should not be changed if it was set manually and mode is not 3
+      //error[1] = 0; 
+      DEBUG_PRINT ((F
+		    ("Status: ventstate is on highest. Not changing that because it was set manually and mode is not 3")));
+      return;
+    }
+  autohigh = false;
+  DEBUG_PRINT ((F ("Status: Setting ventstate...")));
+  int count = 0;
+  while (current != desired && count < 10)
+    {
+      DEBUG_PRINT ((F ("Status: Pressing button...")));
+      digitalWrite (relais, HIGH);
+      delay (300);
+      digitalWrite (relais, LOW);
+      delay (300);
+      current = ledventstate (brightness ());
+      DEBUG_PRINT ((current));
+      ledblink (current + 1);
+      count++;
+    }
+  if (count > 9)
+    {				// check if something went wrong 
+      error[2]++;
+      DEBUG_PRINT ((F ("Status: Error setting ventstate. Tried 10x")));
+    }
+  else
+    {
+      ventstate = current;	// update ventstate to the new setting
+      //error[2] = 0;                                 // in case there were errors, reset the counter since it worked out fine anyway
+      DEBUG_PRINT ((F ("Status: Sucessfully set ventstate")));
+    }
+}
+
+void
+syncventstate ()
+{
+  checkventstate = ledventstate (brightness ());
+  if (checkventstate < 3)
+    {
+      ventstate = checkventstate;
+    }
+  else
+    {
+      error[0]++;
+      DEBUG_PRINT ((F ("Status: Error syncing ventstate")));
+    }
+}
+
+void
+ledblink (int x)
+{
+  int i = 0;
+  while (i < x)
+    {
+      digitalWrite (LED_BUILTIN, HIGH);
+      delay (100);
+      digitalWrite (LED_BUILTIN, LOW);
+      delay (100);
+      i++;
+    }
+}
+
+void
+blindsetventstate (int desired)
+{				// this is only used if there is a problem with reading the state via the LED
+  lastfailTime = currentTime;	// set timer to try again in an hour (checkInterval)
+  checkneeded = true;
+  DEBUG_PRINT ((F ("Status: Starting blindsetventstate...")));
+  switch (desired)
+    {
+    case 0:			// need to check whether one or two presses are needed to get to desired state
+      if (ventstate == 1)
+	{			// not very elegant but transparent and robust, I guess 
+	  digitalWrite (relais, HIGH);
+	  delay (300);
+	  digitalWrite (relais, LOW);
+	  delay (300);
+	  digitalWrite (relais, HIGH);
+	  delay (300);
+	  digitalWrite (relais, LOW);
+	  ventstate = desired;
+	  DEBUG_PRINT ((F ("Status: Blindly changed ventstate from 1 to 0")));
+	}
+      else
+	{
+	  digitalWrite (relais, HIGH);
+	  delay (300);
+	  digitalWrite (relais, LOW);
+	  ventstate = desired;
+	  DEBUG_PRINT ((F ("Status: Blindly changed ventstate from 2 to 0")));
+	  autohigh = false;
+	}
+      break;
+    case 1:
+      if (ventstate == 2)
+	{
+	  digitalWrite (relais, HIGH);
+	  delay (300);
+	  digitalWrite (relais, LOW);
+	  delay (300);
+	  digitalWrite (relais, HIGH);
+	  delay (300);
+	  digitalWrite (relais, LOW);
+	  ventstate = desired;
+	  DEBUG_PRINT ((F ("Status: Blindly changed ventstate from 2 to 1")));
+	  autohigh = false;
+	}
+      else
+	{
+	  digitalWrite (relais, HIGH);
+	  delay (300);
+	  digitalWrite (relais, LOW);
+	  ventstate = desired;
+	  DEBUG_PRINT ((F ("Status: Blindly changed ventstate from 0 to 1")));
+	}
+      break;
+    case 2:
+      if (ventstate == 0)
+	{
+	  digitalWrite (relais, HIGH);
+	  delay (300);
+	  digitalWrite (relais, LOW);
+	  delay (300);
+	  digitalWrite (relais, HIGH);
+	  delay (300);
+	  digitalWrite (relais, LOW);
+	  ventstate = desired;
+	  DEBUG_PRINT ((F ("Status: Blindly changed ventstate from 0 to 2")));
+	  autohigh = true;
+	}
+      else
+	{
+	  digitalWrite (relais, HIGH);
+	  delay (300);
+	  digitalWrite (relais, LOW);
+	  ventstate = desired;
+	  DEBUG_PRINT ((F ("Status: Blindly changed ventstate from 1 to 2")));
+	  autohigh = true;
+	}
+      break;
+    }
+}
+
+void
+update_display ()
+{
+  lcd.setCursor (0, 0);		// oben links
+  lcd.print (temperature[0], 1);
+  lcd.print ((char) 223);	//lcd.print("C"); // outside temp
+
+  lcd.setCursor (6, 0);		//oben mitte
+  lcd.print (temperature[1], 1);
+  lcd.print ((char) 223);	//lcd.print("C"); // incoming temp
+
+  lcd.setCursor (12, 0);	// oben rechts
+  lcd.print (dew (temperature[2], humidity[2]), 1);
+  lcd.print ((char) 223);	// outcoming dewpoint
+
+  lcd.setCursor (0, 1);		// unten links (0,1) is das erste Zeichen in der zweiten Zeile. 
+  lcd.print (temperature[2], 1);
+  lcd.print ((char) 223);	// outcoming temp
+
+  lcd.setCursor (12, 1);	// unten rechts
+  lcd.print (100 * (temperature[1] - temperature[0]) /
+	     (temperature[2] - temperature[0]), 0);
+  lcd.print ("%");
+}
+
+
+void
+print_csv (const String & variable, int value[], byte n)
+{
+  Serial.print (variable);
+  for (byte i = 0; i < n; i++)
+    {
+      Serial.print (F (","));
+      Serial.print (value[i]);
+    }
+  Serial.print (F (","));
+}
+
+
+void
+print_csv (const String & variable, float value, byte digits)
+{
+  Serial.print (variable);
+  Serial.print (F (","));
+  Serial.print (value, digits);
+  Serial.print (F (","));
+}
+
+void
+print_csv (const String & variable, int value)
+{
+  Serial.print (variable);
+  Serial.print (F (","));
+  Serial.print (value);
+  Serial.print (F (","));
+}
+
+void
+print_csv (const String & variable, byte value)
+{
+  Serial.print (variable);
+  Serial.print (F (","));
+  Serial.print (value);
+  Serial.print (F (","));
+}
+
+void
+print_csv (const String & variable, unsigned long value)
+{
+  Serial.print (variable);
+  Serial.print (F (","));
+  Serial.print (value);
+  Serial.print (F (","));
+}
+
+void
+send_data ()
+{
+  float ah0 = ah (temperature[0], humidity[0]);
+  float ah1 = ah (temperature[1], humidity[1]);
+  float ah2 = ah (temperature[2], humidity[2]);
+  float humgain;
+  switch (ventstate)
+    {
+    case 0:
+      humgain = (ah1 - ah2) * 1.62;	// arbitrarily assuming 10% of normal airflow
+      break;
+    case 1:
+      humgain = (ah1 - ah2) * 16.2;	// assuming 45 l/s airflow based on measurement report from time of installation
+      break;
+    case 2:
+      humgain = (ah1 - ah2) * 16.2 * 1.4;	// assuming 140% of normal airflow (based on manufacturer spects according to which 65 l/s is max)
+    }
+  print_csv (F ("elapsed"), currentTime - previouslogTime);
+  print_csv (F (" t0"), temperature[0], 2);
+  print_csv (F (" t1"), temperature[1], 2);
+  print_csv (F (" t2"), temperature[2], 2);
+  print_csv (F (" rh0"), humidity[0], 2);
+  print_csv (F (" ah0"), ah (temperature[0], humidity[0]), 1);
+  print_csv (F (" rh1"), humidity[1], 2);
+  print_csv (F (" ah1"), ah1, 1);
+  print_csv (F (" rh2"), humidity[2], 2);
+  print_csv (F (" ah2"), ah2, 1);
+  print_csv (F (" dew0"), dew (temperature[0], humidity[0]), 1);
+  print_csv (F (" dew1"), dew (temperature[1], humidity[1]), 1);
+  print_csv (F (" dew2"), dew (temperature[2], humidity[2]), 1);
+  print_csv (F (" h-eff"), 100 * ((ah1 - ah0) / (ah2 - ah0)), 1);
+  print_csv (F (" t-eff"),
+	     100 * (temperature[1] - temperature[0]) / (temperature[2] -
+							temperature[0]), 1);
+  print_csv (F (" hum-gain"), humgain, 2);	                              // unit is  g/hour (assuming constant airflow 45 l/s normally
+  print_csv (F (" ventstate"), ventstate);
+  print_csv (F (" ledventstate"), lastledventstate);
+  print_csv (F (" brightness"), ledbrightness);	                          // made this a global variable to make sure its the same value used for ledventstate (debugging)
+                                                                          // unfortunately, this is still not the value that led to an error but simply the last reading
+  print_csv (F (" desiredventstate"), desiredventstate);
+  print_csv (F (" errors"), error, 3);
+  print_csv (F (" lederror"), lederror);
+  print_csv (F (" CR0-1"), old_changerate[0], 2);
+  print_csv (F (" CR0-2"), new_changerate[0], 2);
+  print_csv (F (" CR2-1"), old_changerate[2], 2);
+  print_csv (F (" CR2-2"), new_changerate[2], 2);
+  print_csv (F (" timerup"), currentTime - colderoutsideTime);
+  print_csv (F (" timerdown"), currentTime - warmeroutsideTime);
+  print_csv (F (" timerhigh"), currentTime - muchcolderoutsideTime);
+  print_csv (F (" old_t_vals"), used_old_t_value, numsens);
+  print_csv (F (" old_h_vals"), used_old_h_value, numsens);
+  print_csv (F (" sensorerrors"), errorsensor, numsens);
+  print_csv (F (" h-index"), historyIndex);
+  print_csv (F (" mem"), freeMemory ());
+  Serial.println (F ("end"));
+}
+
