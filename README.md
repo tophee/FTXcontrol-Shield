@@ -28,7 +28,9 @@ In this project, I'm monitoring and controlling the ventilation of my house. My 
 * Various electronic components to build the shield (see schematic). Most importantly:
   * 1 photoresistor for reading the current ventilation state via the LED on the ventilation unit's control board
   * 1 optocoupler to switch the ventilation state on the control board
-* 1 LCD display
+* (1 LCD display)
+
+The Arduino is connected to a USB port on a Linux server. This was a convenient solution for me because I already had my home server next to the ventilation unit. If you don't have a computer close by, this the control shield will still work fpr controlling the ventilation but you will not be able to log anything. Connecting the Arduino to wifi or ethernet would be an entirely new project, but it's possible, of course.
 
 
 ## The schematic
