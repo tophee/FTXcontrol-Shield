@@ -68,10 +68,10 @@ bool checkneeded = false;                         // this flag indicates whether
 int error[6];
 int lederror = 0;                                 // counting how often reading the LED (ledventstate) failed
 int ledbrightness;                                // this is for long term debugging to make sure the ledbrighness reported is the same as the one used to calculate ledventstate
-const int mode = 2; // 0 = manual, 1 = semi-automatic, 2 = automatic, 3 = enforced automatic
-// semi-automatic only becomes active when threshhold is crossed (no syncing of ventstates)
-// automatic checks actual state regularly and corrects manual changes (except high ventilation)
-// enforced automatic will even "correct" when high ventilation is turned on manually
+const int mode = 2;                               // 0 = manual, 1 = semi-automatic, 2 = automatic, 3 = enforced automatic
+                                                  // semi-automatic only becomes active when threshhold is crossed (no syncing of ventstates)
+                                                  // automatic checks actual state regularly and corrects manual changes (except high ventilation)
+                                                  // enforced automatic will even "correct" when high ventilation is turned on manually
 
 // uncomment next line to debug
 //#define DEBUG
@@ -96,7 +96,7 @@ void setup() {
   DEBUG_PRINT((F("+++++++++++++++++++++++++++++++++++++++++++++")));
   DEBUG_PRINT((F("Status: Starting setup...")));
   lcd.init();
-  lcd.backlight(); //Hintergrundbeleuchtung einschalten (lcd.noBacklight(); schaltet die Beleuchtung aus).
+  lcd.backlight(); 
   Serial.begin(9600);
   for (auto& sensor : dht) {
     sensor.begin();
@@ -110,10 +110,6 @@ void setup() {
   buttonpress = 0;
   attachInterrupt(0, pin_ISR, RISING);
 
-
-  //  for (int thisReading = 0; thisReading < numReadings; thisReading++) {
-  //    reading[thisReading] = 0;
-  //  }
   DEBUG_PRINT((F("Status: Initializing ventstate...")));
   delay(100);
   ventstate = ledventstate(brightness());                   // check the current state
@@ -190,28 +186,6 @@ void loop() {
     DEBUG_PRINT((F("Status: Changed desired ventstate to 0")));
   }
 
-
-
-
-  // buttonpress = digitalRead(button);                                     // the button is merely for testing/ troubleshooting
-
-  //  if (buttonpress == 1){                                                 // debouncing the button
-  //   // delay(100);
-  //   // buttonpress = digitalRead(button);
-  //   // if (buttonpress == 0){
-  //      desiredventstate++;
-  //      buttonpress = 0;
-  //      digitalWrite(LED_BUILTIN, HIGH);
-  //      DEBUG_PRINT((F("button pressed... New desired ventstate is... ")));
-  //      DEBUG_PRINT((desiredventstate));
-  //      delay(1000);
-  //      digitalWrite(LED_BUILTIN, LOW);
-  //    //}
-  //    if (desiredventstate > 2){                           // make sure we jump from 2 back to 0
-  //      desiredventstate = 0;
-  //    }
-  //  }
-  //
   if (desiredventstate != ventstate && mode > 0) {     // unless we're in manual mode ...
     DEBUG_PRINT((F("Status: Changing ventstate...")));
     setventstate(desiredventstate);                    // ... we adjust the ventilation
@@ -263,19 +237,19 @@ void read_sensors() {
     float old_value = temperature[i];
     float new_value = dht[i].readTemperature();
     byte count = 0;
-    while (isnan(new_value) && count < 10) {       // retrying up to 10 times if reading fails
+    while (isnan(new_value) && count < 10) {              // retrying up to 10 times if reading fails
       errorsensor[i]++;
       DEBUG_PRINT((F("Error: NaN value for temp")));
       DEBUG_PRINT((i));
       DEBUG_PRINT((F("Trying again...")));
-      delay(500);                                  // waiting 100 ms was too short here. would still produce NaNs
-      new_value = dht[i].readTemperature();        // the isnan function is in the DHT library
+      delay(500);                                         // waiting 100 ms was too short here. would still produce NaNs
+      new_value = dht[i].readTemperature();               // the isnan function is in the DHT library
       DEBUG_PRINT((new_value));
       count++;
     }
     if (isnan(new_value)) {
-      temperature[i] = old_value;                 // keeping the old value for another cycle seems the best way to handle this
-      used_old_t_value[i]++;                      // keep a record of the failure
+      temperature[i] = old_value;                         // keeping the old value for another cycle seems the best way to handle this
+      used_old_t_value[i]++;                              // keep a record of the failure
       DEBUG_PRINT((F("Status: Used old value for temp")));
       DEBUG_PRINT((i));
     }
@@ -306,8 +280,8 @@ void read_sensors() {
       count++;
     }
     if (isnan(new_value)) {
-      humidity[i] = old_value;                        // keeping the old value for another cycle seems the best way to handle this
-      used_old_h_value[i]++;                          // keep a record of the failure
+      humidity[i] = old_value;                            // keeping the old value for another cycle seems the best way to handle this
+      used_old_h_value[i]++;                              // keep a record of the failure
       DEBUG_v_PRINT((F("Status: Used old value for humidity")));
       DEBUG_v_PRINT((i));
     }
@@ -328,7 +302,7 @@ void read_sensors() {
 
 
 
-void save_to_history() {              // this saves the current value for outside and inside temperature (for the time being)
+void save_to_history() {                                           // this saves the current value for outside and inside temperature (for the time being)
   DEBUG_PRINT((F("Status: Adding value to history array at index... ")));
   DEBUG_PRINT((historyIndex));
   byte halfhistory = history / 2;
@@ -595,12 +569,12 @@ void setventstate(int desired) {
     ledblink(current + 1);
     count++;
   }
-  if (count > 9) {                              // check if something went wrong
+  if (count > 9) {                                   // check if something went wrong
     error[2]++;
     DEBUG_PRINT((F("Status: Error setting ventstate. Tried 10x")));
   }
   else {
-    ventstate = current;                       // update ventstate to the new setting
+    ventstate = current;                            // update ventstate to the new setting
     //error[2] = 0;                                 // in case there were errors, reset the counter since it worked out fine anyway
     DEBUG_PRINT((F("Status: Sucessfully set ventstate")));
     DEBUG_PRINT((F("+++++++++++++++++++++++++++++++++++++++++++++")));
@@ -632,13 +606,13 @@ void ledblink(int x) {
   }
 }
 
-void blindsetventstate(int desired) { // this is only used if there is a problem with reading the state via the LED
-  lastfailTime = currentTime;         // set timer to try again in an hour (checkInterval)
+void blindsetventstate(int desired) {                         // this is only used if there is a problem with reading the state via the LED
+  lastfailTime = currentTime;                                 // set timer to try again in an hour (checkInterval)
   checkneeded = true;
   DEBUG_PRINT((F("Status: Starting blindsetventstate...")));
   switch (desired) {
-    case 0:                           // need to check whether one or two presses are needed to get to desired state
-      if (ventstate == 1) {             // not very elegant but transparent and robust, I guess
+    case 0:                                                   // need to check whether one or two presses are needed to get to desired state
+      if (ventstate == 1) {                                   // not very elegant but transparent and robust, I guess
         digitalWrite(relais, HIGH);
         delay(300);
         digitalWrite(relais, LOW);
