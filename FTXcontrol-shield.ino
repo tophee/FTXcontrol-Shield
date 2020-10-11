@@ -64,7 +64,8 @@ bool historyarrayhalffull = false;                // this flag indicates when ne
 bool autohigh = true;                             // this flag indicates whether high ventilation state was set automatically (rather than manually)
 // assuming autohigh at startup to avoid getting stuck in ventstate 2
 bool checkneeded = false;                         // this flag indicates whether ventstate needs to be synced after failed reading of ledventstate
-int error[6];
+const byte numerr = 6;                            // number of errors being monitored
+int error[numerr];
 int lederror = 0;                                 // counting how often reading the LED (ledventstate) failed
 int ledbrightness;                                // this is for long term debugging to make sure the ledbrighness reported is the same as the one used to calculate ledventstate
 const int mode = 2;                               // 0 = manual, 1 = semi-automatic, 2 = automatic, 3 = enforced automatic
@@ -869,7 +870,7 @@ void send_data_csv {                                 // I'm not using this
   print_csv(F(" brightness"), ledbrightness);                      // made this a global variable to make sure its the same value used for ledventstate (debugging)
                                                                    // unfortunately, this is still not the value that led to an error but simply the last reading
   print_csv(F(" desiredventstate"), desiredventstate);
-  print_csv(F(" errors"), error, 3);
+  print_csv(F(" errors"), error, numerr);
   print_csv(F(" lederror"), lederror);
   print_csv(F(" CR0-1"), old_changerate[0], 2);
   print_csv(F(" CR0-2"), new_changerate[0], 2);
