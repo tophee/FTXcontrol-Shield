@@ -17,7 +17,7 @@ In this project, I'm monitoring and controlling the ventilation of my house. My 
   * Set venilation to high when oustide temperature is lower than inside temperature and insider temperature is over 25°C. (Cool down the house during the night.)
 * Log all values 
   * to either a csv file (using [processing](https://github.com/processing/processing) to read the data from the Arduino serial port) or
-  * to an [InfluxDB](https://github.com/influxdata/influxdb) database (using [Petr Pudlak's python script](https://github.com/ppetr/arduino-influxdb) to read the serial port and send the data to the database).
+  * to an [InfluxDB](https://github.com/influxdata/influxdb) database (using [Petr Pudlak's python script](https://github.com/ppetr/arduino-influxdb) to read the serial port and send the data to the database). (**Update**: Petr's scripts have served me well for two or so years, but when I changed my setup and moved the processing to a new machine, the script kept hanging whenever an incomplete line (=an incomplete set of transmitted data) was received. I updated the code to include a 10s timeout, i.e. any line that is not completed within 10 seconds will be dismissed in [my fork](https://github.com/tophee/arduino-influxdb).)
 * Display values on an LCD display on the ventilation unit (currently not quite implemented)
 * Manually control the ventilation state via a button
 
